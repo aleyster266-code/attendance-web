@@ -6,17 +6,12 @@ export const dynamic = 'force-dynamic'
 export default async function CarnetsPage() {
   const supabase = await createClient()
 
-  const { data: students } = await supabase
-    .from('students')
-    .select('id, name, grade, section, qr_token, qr_expires_at')
-    .eq('active', true)
-    .order('grade')
-    .order('name')
+  const { data: { user } } = await supabase.auth.getUser()
 
   const { data: profile } = await supabase
     .from('users')
     .select('institution_id')
-    .eq('id', (await supabase.auth.getUser()).data.user!.id)
+    .eq('id', user!.id)
     .single()
 
   const { data: institution } = await supabase
@@ -25,12 +20,17 @@ export default async function CarnetsPage() {
     .eq('id', profile?.institution_id ?? '')
     .single()
 
-  // Obtener grados unicos
+  // Solo necesitamos los grados — los alumnos con SVG se cargan via API
+  const { data: students } = await supabase
+    .from('students')
+    .select('grade')
+    .eq('active', true)
+    .order('grade')
+
   const grades = [...new Set(students?.map(s => s.grade) ?? [])].sort()
 
   return (
     <CarnetsClient
-      students={students ?? []}
       institutionName={institution?.name ?? 'Colegio'}
       grades={grades}
     />
